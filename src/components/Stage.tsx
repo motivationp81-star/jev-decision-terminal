@@ -77,6 +77,16 @@ export default function Stage() {
     let colCur = hexRgb(CASES[0].color);
     let acts: Act[] = [];
     let actTimer = 0;
+    /* orbiter: a dot that revolves around the active box, leaving a line
+       trail behind it, and flies from box to box as the focus moves */
+    let orbAct: Act | null = null;
+    let orbAng = 0;
+    let orbX = 0, orbY = 0;
+    let flyT = 1; // 1 = not flying
+    let flyFrom = { x: 0, y: 0 };
+    let flyCtrl = { x: 0, y: 0 };
+    let flyAct: Act | null = null;
+    const trail: { x: number; y: number }[] = [];
     let logTimer = 0;
     let last = performance.now();
     let raf = 0;
@@ -263,6 +273,68 @@ export default function Stage() {
           ctx.beginPath(); ctx.arc(lx, ly, lr * 1.06, 0, 6.283); ctx.stroke();
         }
       });
+
+      /* ---- orbiter dot + trailing line, box to box ---- */
+      const boxOf = (a: Act) => {
+        const n = nodes[a.node];
+        const x = projX(n.x, n.y), y = projY(n.y);
+        return { bx: x - bw * 0.08, by: y - bh * 0.30, cx: x - bw * 0.08 + bw / 2, cy: y - bh * 0.30 + bh / 2 };
+      };
+      const target = acts.length ? acts[acts.length - 1] : null;
+      if (target && active) {
+        if (orbAct !== target && flyT >= 1) {
+          /* start flying from wherever the dot is to the new box */
+          flyAct = target;
+          flyFrom = { x: orbX || boxOf(target).cx, y: orbY || boxOf(target).cy };
+          const tb = boxOf(target);
+          flyCtrl = { x: (flyFrom.x + tb.cx) / 2, y: Math.min(flyFrom.y, tb.cy) - PH() * 0.05 };
+          flyT = 0;
+        }
+        const tb = boxOf(flyT < 1 && flyAct ? flyAct : target);
+        const rx = bw / 2 + 16, ry = bh / 2 + 13;
+        if (flyT < 1) {
+          flyT = Math.min(1, flyT + dt / 620);
+          const e = flyT * flyT * (3 - 2 * flyT);
+          const qx = (1 - e) * (1 - e) * flyFrom.x + 2 * (1 - e) * e * flyCtrl.x + e * e * (tb.cx + rx);
+          const qy = (1 - e) * (1 - e) * flyFrom.y + 2 * (1 - e) * e * flyCtrl.y + e * e * tb.cy;
+          orbX = qx; orbY = qy;
+          if (flyT >= 1) { orbAct = flyAct; orbAng = 0; }
+        } else {
+          orbAct = target;
+          orbAng += dt * 0.0038;
+          orbX = tb.cx + Math.cos(orbAng) * rx;
+          orbY = tb.cy + Math.sin(orbAng) * ry;
+        }
+        trail.push({ x: orbX, y: orbY });
+        if (trail.length > 52) trail.shift();
+      } else if (!active) {
+        /* paused/stopped: keep the trail, just don't grow it */
+      } else {
+        trail.length = 0;
+        orbAct = null;
+      }
+      if (trail.length > 1) {
+        ctx.save();
+        ctx.shadowColor = rgba(colCur, 0.9); ctx.shadowBlur = 12;
+        for (let i = 1; i < trail.length; i++) {
+          const f = i / trail.length;
+          ctx.strokeStyle = rgba(colCur, f * 0.85);
+          ctx.lineWidth = 1 + f * 2.2;
+          ctx.beginPath();
+          ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+          ctx.lineTo(trail[i].x, trail[i].y);
+          ctx.stroke();
+        }
+        ctx.restore();
+        const hg = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, 15);
+        hg.addColorStop(0, 'rgba(255,255,255,0.98)');
+        hg.addColorStop(0.35, rgba(colCur, 0.85));
+        hg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(orbX, orbY, 15, 0, 6.283); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(orbX, orbY, 3.2, 0, 6.283); ctx.fill();
+      }
 
       ctx.restore();
       ctx.globalCompositeOperation = 'source-over';
