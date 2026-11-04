@@ -34,13 +34,13 @@ export default function App() {
         <motion.div key={hud.caseIdx} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} className="hidden" />
       </AnimatePresence>
       <ControlBar onChange={force} />
+      <div className="flex justify-between px-3 pt-0.5 text-[8.5px] tracking-[0.18em] text-slate-500">
+        <span>01 · STATE / IN</span><span>02 · TYPED / QUESTIONS</span><span>03 · JEV / SYSTEM ONE</span><span>04 · GATE / ROUTE</span><span>05 · CODE / ACTS</span>
+      </div>
       <main className="relative flex-1 min-h-0 mx-3 border border-slate-800/80 overflow-hidden">
         <Stage />
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between px-2 pt-1 text-[8.5px] tracking-[0.18em] text-slate-500 z-10">
-          <span>01 · STATE / IN</span><span>02 · TYPED / QUESTIONS</span><span>03 · JEV / SYSTEM ONE</span><span>04 · GATE / ROUTE</span><span>05 · CODE / ACTS</span>
-        </div>
       </main>
-      <BottomPanels caseIdx={hud.caseIdx} tick={Math.floor(hud.decisions)} />
+      <BottomPanels caseIdx={hud.caseIdx} tick={Math.floor(hud.decisions)} onJump={(c) => { sim.caseIdx = c; sim.caseEndsAt = 0; force(); }} />
     </div>
   );
 }

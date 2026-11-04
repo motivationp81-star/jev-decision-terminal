@@ -224,7 +224,7 @@ export default function Stage() {
           if (!sim.frozenCols[group]) {
             const colBase = group * 2 + ((Math.random() * 2) | 0);
             const prev = acts.length ? nodes[acts[acts.length - 1].node] : null;
-            const row = prev && prev.col === colBase ? Math.min(ROWS - 1, prev.row + 1) : (Math.random() * 4) | 0;
+            const row = prev && prev.col === colBase ? Math.min(7, prev.row + 1) : 2 + ((Math.random() * 4) | 0);
             const idx = colBase * ROWS + row;
             acts.push({ node: idx, born: now, result: RESULTS[(Math.random() * RESULTS.length) | 0] });
             if (acts.length > 4) acts.shift();

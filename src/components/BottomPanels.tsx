@@ -22,7 +22,10 @@ function Panel({ title, right, children, className = '' }: { title: string; righ
   );
 }
 
-export default function BottomPanels({ caseIdx, tick }: { caseIdx: number; tick: number }) {
+const CASE_TILE = [0, 1, 7, 11, 3, 9]; // use-case tile index per case
+const TILE_CASE: Record<number, number> = { 0: 0, 1: 1, 7: 2, 11: 3, 3: 4, 9: 5 };
+
+export default function BottomPanels({ caseIdx, tick, onJump }: { caseIdx: number; tick: number; onJump: (c: number) => void }) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartApi = useRef<IChartApi | null>(null);
   const series = useRef<{ setData: (d: { time: UTCTimestamp; value: number }[]) => void }[]>([]);
@@ -31,7 +34,7 @@ export default function BottomPanels({ caseIdx, tick }: { caseIdx: number; tick:
   useEffect(() => {
     if (!chartRef.current) return;
     const chart = createChart(chartRef.current, {
-      layout: { background: { color: 'transparent' }, textColor: '#5b6b84', fontSize: 8, fontFamily: 'ui-monospace, Menlo, monospace' },
+      layout: { background: { color: 'transparent' }, textColor: '#5b6b84', fontSize: 8, fontFamily: 'ui-monospace, Menlo, monospace', attributionLogo: false },
       grid: { vertLines: { color: 'rgba(60,80,110,0.15)' }, horzLines: { color: 'rgba(60,80,110,0.15)' } },
       rightPriceScale: { visible: false }, leftPriceScale: { visible: false },
       timeScale: { visible: false }, crosshair: { vertLine: { visible: false }, horzLine: { visible: false } },
@@ -85,7 +88,12 @@ export default function BottomPanels({ caseIdx, tick }: { caseIdx: number; tick:
         <Panel title="12 USE CASES" right={`case 0${caseIdx + 1}`}>
           <div className="grid grid-cols-3 gap-1">
             {UC.map((u, i) => (
-              <div key={u} className={`text-[8.5px] px-1 py-0.5 border truncate ${i === caseIdx * 2 ? 'text-black font-bold' : 'border-slate-800 text-slate-400'}`} style={i === caseIdx * 2 ? { background: CASES[caseIdx].color } : undefined}>
+              <div
+                key={u}
+                onClick={() => { if (TILE_CASE[i] !== undefined) onJump(TILE_CASE[i]); }}
+                className={`text-[8.5px] px-1 py-0.5 border truncate ${TILE_CASE[i] !== undefined ? 'cursor-pointer' : ''} ${i === CASE_TILE[caseIdx] ? 'text-black font-bold' : 'border-slate-800 text-slate-400'}`}
+                style={i === CASE_TILE[caseIdx] ? { background: CASES[caseIdx].color } : undefined}
+              >
                 <span className="text-slate-500 mr-1">{String(i + 1).padStart(2, '0')}</span>{u}
               </div>
             ))}
