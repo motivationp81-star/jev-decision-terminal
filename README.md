@@ -38,3 +38,5 @@ Lightweight Charts (confidence stream) · Framer Motion (panel transitions)
 - `index.html` + `assets/` — the production build, served by GitHub Pages
 - `src/` — full source code
 - `index.dev.html` — the Vite dev entry (see above)
+
+<!-- deploy retrigger -->
