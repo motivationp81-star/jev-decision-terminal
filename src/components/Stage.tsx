@@ -83,14 +83,16 @@ export default function Stage() {
     const lit = new Map<number, number>(); // panel idx -> light 0..1
 
     const newPath = (now: number) => {
+      /* an orderly staircase: straight down one column, one step sideways,
+         then down again — the command never leaps across the screen */
       const c0 = (Math.random() * (COLS - 2)) | 0;
-      let r = 1 + ((Math.random() * 3) | 0);
-      pathArr = [];
-      for (let k = 0; k < 5; k++) {
-        const c = Math.min(COLS - 1, c0 + (k % 2 === 0 ? 0 : 1) + (k > 2 ? 1 : 0));
-        pathArr.push(c * ROWS + Math.min(ROWS - 1, r));
-        r = Math.min(ROWS - 1, r + 1 + ((Math.random() * 2) | 0));
-      }
+      const r0 = (Math.random() * 3) | 0;
+      const seq: [number, number][] = [
+        [c0, r0], [c0, r0 + 1], [c0 + 1, r0 + 2], [c0 + 1, r0 + 3], [c0 + 2, r0 + 4],
+      ];
+      pathArr = seq
+        .filter(([c, r]) => c < COLS && r < ROWS)
+        .map(([c, r]) => c * ROWS + r);
       pathSet = new Set(pathArr);
       headIdx = 0;
       pathBorn = now;
@@ -142,10 +144,10 @@ export default function Stage() {
         /* path lifecycle: light a path ~4.5s, head steps down it */
         pathTimer -= dt;
         headTimer -= dt;
-        if (pathArr.length === 0 || pathTimer <= 0) { newPath(now); pathTimer = 4600; headTimer = 0; }
+        if (pathArr.length === 0 || pathTimer <= 0) { newPath(now); pathTimer = 2700 * Math.max(1, pathArr.length) + 600; headTimer = 400; }
         if (headTimer <= 0 && headIdx < pathArr.length - 1) {
           headIdx++;
-          headTimer = 880;
+          headTimer = 2700;
           resultText = RESULTS[(Math.random() * RESULTS.length) | 0];
         }
       }
@@ -315,7 +317,7 @@ export default function Stage() {
         const cxp = tx + pw / 2, cyp = ty + ph2 / 2;
         const rx2 = pw / 2 + 15, ry2 = ph2 / 2 + 12;
         if (flyT < 1) {
-          flyT = Math.min(1, flyT + dt / 560);
+          flyT = Math.min(1, flyT + dt / 950);
           const e = flyT * flyT * (3 - 2 * flyT);
           orbX = (1 - e) * (1 - e) * flyFrom.x + 2 * (1 - e) * e * flyCtrl.x + e * e * (cxp + rx2);
           orbY = (1 - e) * (1 - e) * flyFrom.y + 2 * (1 - e) * e * flyCtrl.y + e * e * cyp;
@@ -327,7 +329,7 @@ export default function Stage() {
           orbY = cyp + Math.sin(orbAng) * ry2;
         }
         trail.push({ x: orbX, y: orbY });
-        if (trail.length > 54) trail.shift();
+        if (trail.length > 42) trail.shift();
       }
       if (trail.length > 1) {
         ctx.save();
