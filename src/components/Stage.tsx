@@ -1,18 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { CASES, LABELS, RESULTS, LOG_LINES, sim, currentColor, istClock } from '../engine';
 
-/* Canvas stage: a wide tilted plane of labels, braided white-core light rivers,
-   hair-thin connection web, travelling signal boxes with result strips, and a
-   thin lens circle — the anatomy of the reference video. */
+/* Stage v2 — rebuilt from the reference video, frame by frame:
+   - every node is a large soft dark PANEL (faint border, name top-left,
+     microtext on the right, coloured dash under the name)
+   - a decision PATH of ~5 panels lights up together in the case colour
+     (bright outline + bloom); the path's HEAD panel carries the filled
+     result strip and a soft flare, and the orbiting dot circles the head
+   - braided white-hot light rivers run between the panel columns
+   - the camera glides slowly across a plane wider than the screen */
 
-interface NodeT { x: number; y: number; col: number; row: number; li: number; dash: string; tw: number }
-interface Act { node: number; born: number; result: string }
+interface Panel { x: number; y: number; col: number; row: number; li: number; accent: string }
 interface Ghost { x: number; y: number; w: string; a: number; ph: number }
 
-const COLS = 10;
+const COLS = 9;
 const ROWS = 9;
-const DASHES = ['#ff5c8a', '#25e6ff', '#ffd23e', '#e8f4ff', '#9dff00'];
-const GHOST_WORDS = ['queue check', 'title len', 'api ping', 'log write', 'spam scan', 'hold gate', 'map read', 'token ok', 'reply draft', 'score head', 'state enc', 'gate pass', 'file hash', 'dm state', 'post id', 'cost chk', 'round no', 'part no', 'link out', 'note save', 'rank in', 'time ist'];
+const ACCENTS = ['#ffd23e', '#25e6ff', '#ff5c8a', '#9dff00', '#e8f4ff'];
+const GHOST_WORDS = ['queue check', 'title len', 'api ping', 'log write', 'spam scan', 'hold gate', 'map read', 'token ok', 'cost chk', 'part no', 'link out', 'note save', 'time ist', 'dm state', 'post id'];
 
 function hexRgb(h: string): [number, number, number] {
   return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -30,32 +34,21 @@ export default function Stage() {
     const wrap = wrapRef.current!;
     const ctx = cv.getContext('2d')!;
 
-    /* build the plane */
-    const nodes: NodeT[] = [];
+    const panels: Panel[] = [];
     for (let c = 0; c < COLS; c++) {
       for (let r = 0; r < ROWS; r++) {
-        nodes.push({
-          x: 0.045 + c * 0.101, y: 0.06 + r * 0.108,
-          col: c, row: r,
+        panels.push({
+          x: 0.028 + c * 0.105, y: 0.04 + r * 0.104, col: c, row: r,
           li: (c * ROWS + r * 7 + ((c * 3 + r) % 5)) % LABELS.length,
-          dash: DASHES[(c * 3 + r * 2) % DASHES.length],
-          tw: Math.random() * 6.28,
+          accent: ACCENTS[(c * 2 + r * 3) % ACCENTS.length],
         });
       }
     }
-    const edges: { a: number; b: number; ph: number; col: string }[] = [];
-    const strandCols = ['255,255,255', '255,61,139', '37,230,255', '255,210,62'];
-    for (let c = 0; c < COLS; c++) {
-      for (let r = 0; r < ROWS - 1; r++) {
-        edges.push({ a: c * ROWS + r, b: c * ROWS + r + 1, ph: Math.random() * 6.28, col: strandCols[(c + r) % 4] });
-        if (c < COLS - 1 && (r + c) % 2 === 0) edges.push({ a: c * ROWS + r, b: (c + 1) * ROWS + r + 1, ph: Math.random() * 6.28, col: strandCols[(c + r + 1) % 4] });
-        if (c > 0 && (r + c) % 3 === 0) edges.push({ a: c * ROWS + r, b: (c - 1) * ROWS + r + 1, ph: Math.random() * 6.28, col: strandCols[(c + r + 2) % 4] });
-      }
-    }
     const ghosts: Ghost[] = [];
-    for (let i = 0; i < 240; i++) ghosts.push({ x: 0.02 + Math.random() * 0.96, y: 0.04 + Math.random() * 0.92, w: GHOST_WORDS[i % GHOST_WORDS.length], a: 0.14 + Math.random() * 0.3, ph: Math.random() * 6.28 });
+    for (let i = 0; i < 130; i++) ghosts.push({ x: Math.random(), y: Math.random(), w: GHOST_WORDS[i % GHOST_WORDS.length], a: 0.10 + Math.random() * 0.22, ph: Math.random() * 6.28 });
     const rivers: number[] = [];
-    for (let i = 0; i < 9; i++) rivers.push(0.085 + i * 0.104);
+    for (let i = 0; i < 8; i++) rivers.push(0.082 + i * 0.1055);
+    const strandCols: [number, number, number][] = [[255, 255, 255], [160, 230, 255], [255, 170, 220], [255, 226, 150], [210, 240, 255]];
 
     let W = 0, H = 0, SW = 0, SH = 0;
     const fit = () => {
@@ -69,28 +62,53 @@ export default function Stage() {
     fit();
     window.addEventListener('resize', fit);
 
-    const PW = () => W * 2.1;           // plane width in canvas px
-    const PH = () => H * 1.5;           // plane height
-    const projX = (x: number, y: number) => (0.5 + (x - 0.5) * (0.88 + 0.12 * y)) * PW();
-    const projY = (y: number) => (0.04 + 0.96 * Math.pow(y, 1.07)) * PH();
+    const PW = () => W * 2.3;
+    const PH = () => H * 1.45;
+    const projX = (x: number, y: number) => (0.5 + (x - 0.5) * (0.90 + 0.10 * y)) * PW();
+    const projY = (y: number) => (0.03 + 0.97 * Math.pow(y, 1.05)) * PH();
+    const panW = () => PW() * 0.094;
+    const panH = () => PH() * 0.086;
 
-    let colCur = hexRgb(CASES[0].color);
-    let acts: Act[] = [];
-    let actTimer = 0;
-    /* orbiter: a dot that revolves around the active box, leaving a line
-       trail behind it, and flies from box to box as the focus moves */
-    let orbAct: Act | null = null;
+    /* decision path state */
+    let pathSet = new Set<number>();
+    let pathArr: number[] = [];
+    let headIdx = 0;
+    let pathBorn = 0;
+    let pathTimer = 0;
+    let headTimer = 0;
+    let resultText = RESULTS[0];
+    const lit = new Map<number, number>(); // panel idx -> light 0..1
+
+    const newPath = (now: number) => {
+      const c0 = (Math.random() * (COLS - 2)) | 0;
+      let r = 1 + ((Math.random() * 3) | 0);
+      pathArr = [];
+      for (let k = 0; k < 5; k++) {
+        const c = Math.min(COLS - 1, c0 + (k % 2 === 0 ? 0 : 1) + (k > 2 ? 1 : 0));
+        pathArr.push(c * ROWS + Math.min(ROWS - 1, r));
+        r = Math.min(ROWS - 1, r + 1 + ((Math.random() * 2) | 0));
+      }
+      pathSet = new Set(pathArr);
+      headIdx = 0;
+      pathBorn = now;
+      resultText = RESULTS[(Math.random() * RESULTS.length) | 0];
+    };
+
+    /* orbiter */
+    let orbPanel = -1;
     let orbAng = 0;
     let orbX = 0, orbY = 0;
-    let flyT = 1; // 1 = not flying
+    let flyT = 1;
     let flyFrom = { x: 0, y: 0 };
     let flyCtrl = { x: 0, y: 0 };
-    let flyAct: Act | null = null;
+    let flyPanel = -1;
     const trail: { x: number; y: number }[] = [];
+
+    let colCur = hexRgb(CASES[0].color);
     let logTimer = 0;
     let last = performance.now();
     let raf = 0;
-    let lastReset = sim.resetNonce;
+    const camPhase = Math.random() * 40;
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -99,9 +117,6 @@ export default function Stage() {
       const dt = active ? rawDt * sim.speed : 0;
       const t = now * 0.001;
 
-      if (lastReset !== sim.resetNonce) { lastReset = sim.resetNonce; acts = []; }
-
-      /* case timing + counters live here so everything stays in sync */
       if (active) {
         if (sim.caseEndsAt === 0) sim.caseEndsAt = now + 7000;
         if (now >= sim.caseEndsAt) {
@@ -119,228 +134,219 @@ export default function Stage() {
           const kind: 'ok' | 'warn' = Math.random() < 0.12 ? 'warn' : 'ok';
           sim.log = [{ t: istClock(), text: LOG_LINES[(Math.random() * LOG_LINES.length) | 0], kind }, ...sim.log].slice(0, 7);
         }
+        /* path lifecycle: light a path ~4.5s, head steps down it */
+        pathTimer -= dt;
+        headTimer -= dt;
+        if (pathArr.length === 0 || pathTimer <= 0) { newPath(now); pathTimer = 4600; headTimer = 0; }
+        if (headTimer <= 0 && headIdx < pathArr.length - 1) {
+          headIdx++;
+          headTimer = 880;
+          resultText = RESULTS[(Math.random() * RESULTS.length) | 0];
+        }
       }
       const colTgt = hexRgb(currentColor());
       for (let i = 0; i < 3; i++) colCur[i] += (colTgt[i] - colCur[i]) * 0.04;
+      /* ease panel lights toward membership */
+      for (let i = 0; i < panels.length; i++) {
+        const target = pathSet.has(i) ? 1 : 0;
+        const cur = lit.get(i) || 0;
+        const nv = cur + (target - cur) * (active ? 0.045 * sim.speed + 0.01 : 0.02);
+        if (Math.abs(nv) > 0.01 || target === 1) lit.set(i, nv);
+      }
 
-      /* camera: slow ping-pong pan across the wide plane */
-      const cyc = (now * 0.001 * (active ? sim.speed : 0) + frameOff) % 52;
-      const tri = cyc < 26 ? cyc / 26 : 2 - cyc / 26;
-      const camX = tri * (PW() - W) * 0.92;
-      const camY = (PH() - H) * (0.3 + 0.18 * Math.sin(t * 0.11));
+      const cyc = (t * (active ? sim.speed : 0) + camPhase) % 56;
+      const tri = cyc < 28 ? cyc / 28 : 2 - cyc / 28;
+      const camX = tri * (PW() - W) * 0.94;
+      const camY = (PH() - H) * (0.34 + 0.16 * Math.sin(t * 0.1));
 
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = '#010204';
       ctx.fillRect(0, 0, W, H);
       ctx.save();
       ctx.translate(-camX, -camY);
-      ctx.globalCompositeOperation = 'lighter';
 
-      /* case colour wash */
-      const wash = ctx.createRadialGradient(PW() * (0.2 + tri * 0.6), PH() * 0.4, 60, PW() * (0.2 + tri * 0.6), PH() * 0.4, PW() * 0.55);
-      wash.addColorStop(0, rgba(colCur, 0.10)); wash.addColorStop(1, 'rgba(0,0,0,0)');
+      /* case wash */
+      const wash = ctx.createRadialGradient(PW() * (0.2 + tri * 0.6), PH() * 0.42, 60, PW() * (0.2 + tri * 0.6), PH() * 0.42, PW() * 0.55);
+      wash.addColorStop(0, rgba(colCur, 0.09)); wash.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = wash; ctx.fillRect(camX - 50, camY - 50, W + 100, H + 100);
 
       /* ghost micro-labels */
-      ctx.font = `${Math.round(H * 0.016)}px ui-monospace, Menlo, monospace`;
+      ctx.font = `${Math.round(H * 0.015)}px ui-monospace, Menlo, monospace`;
       for (const g of ghosts) {
         const gx = projX(g.x, g.y), gy = projY(g.y);
-        if (gx < camX - 80 || gx > camX + W + 80 || gy < camY - 30 || gy > camY + H + 30) continue;
+        if (gx < camX - 60 || gx > camX + W + 60 || gy < camY - 20 || gy > camY + H + 20) continue;
         const a = g.a * (0.7 + 0.3 * Math.sin(t * 0.9 + g.ph));
-        ctx.fillStyle = `rgba(255,255,255,${a + 0.2})`;
-        ctx.beginPath(); ctx.arc(gx, gy, 1.6, 0, 6.283); ctx.fill();
-        ctx.fillStyle = `rgba(178,205,245,${a})`;
-        ctx.fillText(g.w, gx + 7, gy + 3);
+        ctx.fillStyle = `rgba(255,255,255,${a + 0.15})`;
+        ctx.beginPath(); ctx.arc(gx, gy, 1.5, 0, 6.283); ctx.fill();
+        ctx.fillStyle = `rgba(170,200,240,${a})`;
+        ctx.fillText(g.w, gx + 6, gy + 3);
       }
 
-      /* connection web */
-      for (const e of edges) {
-        const A = nodes[e.a], B = nodes[e.b];
-        const ax = projX(A.x, A.y), ay = projY(A.y), bx = projX(B.x, B.y), by = projY(B.y);
-        if ((ax < camX - 60 && bx < camX - 60) || (ax > camX + W + 60 && bx > camX + W + 60)) continue;
-        const mx = (ax + bx) / 2 + Math.sin(e.ph) * 10, my = (ay + by) / 2;
-        const sh = 0.16 + 0.07 * Math.sin(t * 1.1 + e.ph);
-        ctx.strokeStyle = `rgba(${e.col},${sh})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke();
-      }
-
-      /* braided light rivers — white cores, case-colour fringe */
+      /* braided rivers — many intertwining strands, white-hot knots */
+      ctx.globalCompositeOperation = 'lighter';
       for (let ri = 0; ri < rivers.length; ri++) {
         const rx = rivers[ri];
-        const ph = t * 1.4 + ri * 1.93;
-        const path = (off: number, wob: number) => {
+        const cx0 = projX(rx, 0.5);
+        if (cx0 < camX - 90 || cx0 > camX + W + 90) continue;
+        for (let s = 0; s < 20; s++) {
+          const ph = s * 2.4 + ri * 1.7;
+          const col = strandCols[s % strandCols.length];
+          const isCore = s % 5 === 0;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isCore ? 0.5 : 0.16})`;
+          ctx.lineWidth = isCore ? 1.8 : 1;
           ctx.beginPath();
-          for (let v = 0; v <= 1.001; v += 0.03) {
+          for (let v = 0; v <= 1.001; v += 0.025) {
             const y = projY(v);
-            const x = projX(rx, v) + Math.sin(y * 0.008 + ph + off) * wob + Math.sin(y * 0.021 + ph * 1.6 + off) * wob * 0.45;
+            const x = projX(rx, v) + Math.sin(y * 0.006 + ph + t * (0.5 + (s % 3) * 0.22)) * (7 + (s % 4) * 3.4);
             if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           }
           ctx.stroke();
-        };
-        ctx.strokeStyle = rgba(colCur, 0.05); ctx.lineWidth = 26; path(0, 15);
-        ctx.strokeStyle = rgba(colCur, 0.10); ctx.lineWidth = 11; path(2.1, 18);
-        ctx.strokeStyle = 'rgba(210,235,255,0.34)'; ctx.lineWidth = 3.4; path(0, 13);
-        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.6; path(2.6, 16);
-        ctx.strokeStyle = rgba(colCur, 0.20); ctx.lineWidth = 1.4; path(4.4, 19);
-        /* bright beads travelling down the river */
-        for (let k = 0; k < 4; k++) {
-          const vv = ((t * (0.05 + k * 0.021) + k * 0.27 + ri * 0.13) % 1);
+        }
+        /* bright knots where strands converge + travelling pulses */
+        for (let k = 0; k < 7; k++) {
+          const vv = ((k / 7 + t * 0.016 * (1 + (k % 3) * 0.3) + ri * 0.11) % 1);
           const yy = projY(vv);
-          const xx = projX(rx, vv) + Math.sin(yy * 0.008 + ph) * 13;
-          if (xx < camX - 40 || xx > camX + W + 40) continue;
-          const g = ctx.createRadialGradient(xx, yy, 0, xx, yy, 9);
-          g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.4, rgba(colCur, 0.5)); g.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(xx, yy, 9, 0, 6.283); ctx.fill();
+          const xx = projX(rx, vv) + Math.sin(yy * 0.006 + t) * 7;
+          const rr = 5 + 3.5 * Math.sin(t * 2.2 + k * 1.7 + ri);
+          const g = ctx.createRadialGradient(xx, yy, 0, xx, yy, Math.max(4, rr));
+          g.addColorStop(0, 'rgba(255,255,255,0.95)');
+          g.addColorStop(0.4, rgba(colCur, 0.45));
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(xx, yy, Math.max(4, rr), 0, 6.283); ctx.fill();
         }
-      }
-
-      /* labels */
-      const labelW = PW() * 0.088, labelH = PH() * 0.052;
-      ctx.textBaseline = 'alphabetic';
-      for (const n of nodes) {
-        const x = projX(n.x, n.y), y = projY(n.y);
-        if (x < camX - labelW || x > camX + W + 40 || y < camY - 30 || y > camY + H + 30) continue;
-        const lab = LABELS[n.li];
-        const depth = 0.72 + n.y * 0.4;
-        /* node dot */
-        const tw = 0.5 + 0.5 * Math.sin(t * 2 + n.tw);
-        ctx.fillStyle = `rgba(255,255,255,${0.55 + tw * 0.3})`;
-        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 6.283); ctx.fill();
-        const glow = ctx.createRadialGradient(x, y, 0, x, y, 13 * depth);
-        glow.addColorStop(0, rgba(colCur, 0.30 * tw * depth)); glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 13 * depth, 0, 6.283); ctx.fill();
-        /* name */
-        ctx.font = `600 ${Math.round(H * (0.017 + n.y * 0.006))}px ui-monospace, Menlo, monospace`;
-        ctx.fillStyle = `rgba(233,242,255,${0.82 * depth + 0.18})`;
-        ctx.fillText(lab.name, x + 9, y + 4);
-        /* microtext on the right */
-        ctx.font = `${Math.round(H * 0.0135)}px ui-monospace, Menlo, monospace`;
-        ctx.fillStyle = `rgba(150,180,220,${0.75 * depth})`;
-        lab.micro.forEach((m, mi) => ctx.fillText(m, x + labelW * 0.62, y - 6 + mi * H * 0.017));
-        /* coloured dash under the name */
-        ctx.fillStyle = n.dash;
-        ctx.globalAlpha = 0.75 * depth;
-        ctx.fillRect(x + 9, y + H * 0.014, PW() * 0.016, 2.2);
-        ctx.globalAlpha = 1;
-      }
-
-      /* signal-box activations — a decision path walking down the plane */
-      if (active) {
-        actTimer -= dt;
-        if (actTimer <= 0) {
-          actTimer = 950 + Math.random() * 500;
-          const group = (Math.random() * 5) | 0;
-          if (!sim.frozenCols[group]) {
-            const colBase = group * 2 + ((Math.random() * 2) | 0);
-            const prev = acts.length ? nodes[acts[acts.length - 1].node] : null;
-            const row = prev && prev.col === colBase ? Math.min(7, prev.row + 1) : 2 + ((Math.random() * 4) | 0);
-            const idx = colBase * ROWS + row;
-            acts.push({ node: idx, born: now, result: RESULTS[(Math.random() * RESULTS.length) | 0] });
-            if (acts.length > 4) acts.shift();
-          }
-        }
-      }
-      acts = acts.filter((a) => now - a.born < 4600);
-      const bw = PW() * 0.145, bh = PH() * 0.125;
-      acts.forEach((a, ai) => {
-        const n = nodes[a.node];
-        const x = projX(n.x, n.y), y = projY(n.y);
-        const age = now - a.born;
-        const fade = age < 3400 ? 1 : Math.max(0, 1 - (age - 3400) / 1200);
-        const bx = x - bw * 0.08, by = y - bh * 0.30;
-        ctx.save();
-        ctx.shadowColor = rgba(colCur, 0.95 * fade); ctx.shadowBlur = 30;
-        ctx.strokeStyle = rgba(colCur, 0.95 * fade); ctx.lineWidth = 3;
-        ctx.fillStyle = rgba(colCur, 0.07 * fade);
+        /* soft case-colour fringe behind the river */
+        ctx.strokeStyle = rgba(colCur, 0.05); ctx.lineWidth = 30;
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 12); else ctx.rect(bx, by, bw, bh);
-        ctx.fill(); ctx.stroke();
+        for (let v = 0; v <= 1.001; v += 0.05) {
+          const y = projY(v);
+          const x = projX(rx, v) + Math.sin(y * 0.006 + ri) * 8;
+          if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      /* web strands between panels */
+      ctx.strokeStyle = 'rgba(140,180,230,0.10)';
+      ctx.lineWidth = 1;
+      for (let c = 0; c < COLS - 1; c++) {
+        for (let r = 0; r < ROWS; r++) {
+          if ((c + r) % 2 !== 0) continue;
+          const A = panels[c * ROWS + r], B = panels[(c + 1) * ROWS + Math.min(ROWS - 1, r + 1)];
+          const ax = projX(A.x, A.y) + panW(), ay = projY(A.y) + panH() * 0.5;
+          const bx = projX(B.x, B.y), by = projY(B.y) + panH() * 0.4;
+          if (ax < camX - 40 || bx > camX + W + 40) continue;
+          ctx.beginPath(); ctx.moveTo(ax, ay);
+          ctx.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 + 14, bx, by); ctx.stroke();
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+
+      /* panels */
+      const pw = panW(), ph2 = panH();
+      const headPanelIdx = pathArr.length ? pathArr[Math.min(headIdx, pathArr.length - 1)] : -1;
+      panels.forEach((p, i) => {
+        const x = projX(p.x, p.y), y = projY(p.y);
+        if (x < camX - pw || x > camX + W + 20 || y < camY - ph2 || y > camY + H + 20) return;
+        const L = lit.get(i) || 0;
+        const lab = LABELS[p.li];
+        /* body */
+        ctx.save();
+        if (L > 0.03) { ctx.shadowColor = rgba(colCur, 0.85 * L); ctx.shadowBlur = 26 * L; }
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, pw, ph2, 9); else ctx.rect(x, y, pw, ph2);
+        ctx.fillStyle = L > 0.03 ? rgba(colCur, 0.05 + 0.07 * L) : 'rgba(9,13,20,0.88)';
+        ctx.fill();
+        ctx.strokeStyle = L > 0.03 ? rgba(colCur, 0.25 + 0.75 * L) : 'rgba(120,150,190,0.15)';
+        ctx.lineWidth = L > 0.03 ? 1 + 1.8 * L : 1;
+        ctx.stroke();
         ctx.restore();
-        /* filled result strip along the bottom of the box */
-        ctx.fillStyle = rgba(colCur, 0.92 * fade);
-        const sh2 = PH() * 0.026;
-        ctx.fillRect(bx + 8, by + bh - sh2 - 7, bw - 16, sh2);
-        ctx.font = `700 ${Math.round(H * 0.0145)}px ui-monospace, Menlo, monospace`;
-        ctx.fillStyle = `rgba(5,8,16,${fade})`;
-        ctx.fillText(a.result, bx + 14, by + bh - 12);
-        /* lens circle on the newest activation */
-        if (ai === acts.length - 1) {
-          const lx = bx + bw * 0.86, ly = by + bh * 0.36, lr = bh * 0.62;
-          ctx.strokeStyle = `rgba(255,255,255,${0.65 * fade})`; ctx.lineWidth = 1.6;
-          ctx.beginPath(); ctx.arc(lx, ly, lr, 0, 6.283); ctx.stroke();
-          ctx.strokeStyle = rgba(colCur, 0.5 * fade);
-          ctx.beginPath(); ctx.arc(lx, ly, lr * 1.06, 0, 6.283); ctx.stroke();
+        /* bullet + name */
+        const fs = H * (0.0165 + p.y * 0.004);
+        ctx.fillStyle = p.accent;
+        ctx.fillRect(x + pw * 0.045, y + ph2 * 0.16, 6, 6);
+        ctx.font = `600 ${Math.round(fs)}px ui-monospace, Menlo, monospace`;
+        ctx.fillStyle = `rgba(235,243,255,${0.78 + 0.22 * L})`;
+        ctx.fillText(lab.name, x + pw * 0.045 + 11, y + ph2 * 0.16 + fs * 0.85);
+        /* dash under name */
+        ctx.fillStyle = p.accent; ctx.globalAlpha = 0.8;
+        ctx.fillRect(x + pw * 0.045, y + ph2 * 0.52, pw * 0.16, 2.4);
+        ctx.globalAlpha = 1;
+        /* microtext right */
+        ctx.font = `${Math.round(fs * 0.72)}px ui-monospace, Menlo, monospace`;
+        ctx.fillStyle = `rgba(155,182,216,${0.72 + 0.2 * L})`;
+        lab.micro.forEach((m, mi) => ctx.fillText(m, x + pw * 0.60, y + ph2 * (0.24 + mi * 0.24)));
+        /* head extras: flare + filled result strip */
+        if (i === headPanelIdx && L > 0.4) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          const fx = x + pw * 0.78, fy = y + ph2 * 0.42;
+          const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, ph2 * 0.95);
+          fg.addColorStop(0, `rgba(255,255,255,${0.55 * L})`);
+          fg.addColorStop(0.35, rgba(colCur, 0.4 * L));
+          fg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fx, fy, ph2 * 0.95, 0, 6.283); ctx.fill();
+          ctx.restore();
+          const sh = ph2 * 0.26;
+          ctx.fillStyle = rgba(colCur, 0.92 * L);
+          ctx.fillRect(x + 7, y + ph2 - sh - 6, pw - 14, sh);
+          ctx.font = `700 ${Math.round(fs * 0.78)}px ui-monospace, Menlo, monospace`;
+          ctx.fillStyle = `rgba(4,7,14,${L})`;
+          ctx.fillText(resultText, x + 13, y + ph2 - 11);
         }
       });
 
-      /* ---- orbiter dot + trailing line, box to box ---- */
-      const boxOf = (a: Act) => {
-        const n = nodes[a.node];
-        const x = projX(n.x, n.y), y = projY(n.y);
-        return { bx: x - bw * 0.08, by: y - bh * 0.30, cx: x - bw * 0.08 + bw / 2, cy: y - bh * 0.30 + bh / 2 };
-      };
-      const target = acts.length ? acts[acts.length - 1] : null;
-      if (target && active) {
-        if (orbAct !== target && flyT >= 1) {
-          /* start flying from wherever the dot is to the new box */
-          flyAct = target;
-          flyFrom = { x: orbX || boxOf(target).cx, y: orbY || boxOf(target).cy };
-          const tb = boxOf(target);
-          flyCtrl = { x: (flyFrom.x + tb.cx) / 2, y: Math.min(flyFrom.y, tb.cy) - PH() * 0.05 };
+      /* orbiting dot + trailing line around the head panel */
+      if (headPanelIdx >= 0 && active) {
+        const hp = panels[headPanelIdx];
+        const hx = projX(hp.x, hp.y), hy = projY(hp.y);
+        if (orbPanel !== headPanelIdx && flyT >= 1) {
+          flyPanel = headPanelIdx;
+          flyFrom = { x: orbX || hx + pw / 2, y: orbY || hy + ph2 / 2 };
+          flyCtrl = { x: (flyFrom.x + hx + pw / 2) / 2, y: Math.min(flyFrom.y, hy + ph2 / 2) - PH() * 0.04 };
           flyT = 0;
         }
-        const tb = boxOf(flyT < 1 && flyAct ? flyAct : target);
-        const rx = bw / 2 + 16, ry = bh / 2 + 13;
+        const tb = flyT < 1 && flyPanel >= 0 ? panels[flyPanel] : hp;
+        const tx = projX(tb.x, tb.y), ty = projY(tb.y);
+        const cxp = tx + pw / 2, cyp = ty + ph2 / 2;
+        const rx2 = pw / 2 + 15, ry2 = ph2 / 2 + 12;
         if (flyT < 1) {
-          flyT = Math.min(1, flyT + dt / 620);
+          flyT = Math.min(1, flyT + dt / 560);
           const e = flyT * flyT * (3 - 2 * flyT);
-          const qx = (1 - e) * (1 - e) * flyFrom.x + 2 * (1 - e) * e * flyCtrl.x + e * e * (tb.cx + rx);
-          const qy = (1 - e) * (1 - e) * flyFrom.y + 2 * (1 - e) * e * flyCtrl.y + e * e * tb.cy;
-          orbX = qx; orbY = qy;
-          if (flyT >= 1) { orbAct = flyAct; orbAng = 0; }
+          orbX = (1 - e) * (1 - e) * flyFrom.x + 2 * (1 - e) * e * flyCtrl.x + e * e * (cxp + rx2);
+          orbY = (1 - e) * (1 - e) * flyFrom.y + 2 * (1 - e) * e * flyCtrl.y + e * e * cyp;
+          if (flyT >= 1) { orbPanel = flyPanel; orbAng = 0; }
         } else {
-          orbAct = target;
-          orbAng += dt * 0.0038;
-          orbX = tb.cx + Math.cos(orbAng) * rx;
-          orbY = tb.cy + Math.sin(orbAng) * ry;
+          orbPanel = headPanelIdx;
+          orbAng += dt * 0.0042;
+          orbX = cxp + Math.cos(orbAng) * rx2;
+          orbY = cyp + Math.sin(orbAng) * ry2;
         }
         trail.push({ x: orbX, y: orbY });
-        if (trail.length > 52) trail.shift();
-      } else if (!active) {
-        /* paused/stopped: keep the trail, just don't grow it */
-      } else {
-        trail.length = 0;
-        orbAct = null;
+        if (trail.length > 54) trail.shift();
       }
       if (trail.length > 1) {
         ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
         ctx.shadowColor = rgba(colCur, 0.9); ctx.shadowBlur = 12;
         for (let i = 1; i < trail.length; i++) {
           const f = i / trail.length;
           ctx.strokeStyle = rgba(colCur, f * 0.85);
           ctx.lineWidth = 1 + f * 2.2;
-          ctx.beginPath();
-          ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
-          ctx.lineTo(trail[i].x, trail[i].y);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(trail[i - 1].x, trail[i - 1].y); ctx.lineTo(trail[i].x, trail[i].y); ctx.stroke();
         }
         ctx.restore();
         const hg = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, 15);
         hg.addColorStop(0, 'rgba(255,255,255,0.98)');
         hg.addColorStop(0.35, rgba(colCur, 0.85));
         hg.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = hg;
-        ctx.beginPath(); ctx.arc(orbX, orbY, 15, 0, 6.283); ctx.fill();
+        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(orbX, orbY, 15, 0, 6.283); ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.beginPath(); ctx.arc(orbX, orbY, 3.2, 0, 6.283); ctx.fill();
       }
+      void pathBorn;
 
       ctx.restore();
-      ctx.globalCompositeOperation = 'source-over';
     };
-    let frameOff = Math.random() * 40;
-    frameOff = frameOff; // camera phase offset
     raf = requestAnimationFrame(frame);
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', fit); };
   }, []);

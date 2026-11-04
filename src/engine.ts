@@ -9,12 +9,12 @@ export interface CaseDef {
 }
 
 export const CASES: CaseDef[] = [
-  { name: 'EMAIL TRIAGE',    sub: 'Choice · folder — phishing 0.97',        color: '#ff2a3c', confidence: 0.97 },
-  { name: 'YOUTUBE COMMENT', sub: 'Noul · worth_reply — yes 0.91',          color: '#9dff00', confidence: 0.91 },
-  { name: 'INBOUND LEAD',    sub: 'Score · lead_quality — high 0.89',       color: '#ffb400', confidence: 0.89 },
-  { name: 'BROWSER AGENT',   sub: 'Choice · action — type_destination 0.94', color: '#19d7ff', confidence: 0.94 },
-  { name: 'X FEED POST',     sub: 'Score · viral_fit — high 0.92',          color: '#ff2e88', confidence: 0.92 },
-  { name: 'SUPPORT TICKET',  sub: 'Score · urgency — critical 0.71',        color: '#8b5cff', confidence: 0.71 },
+  { name: 'EMAIL TRIAGE',    sub: 'Choice · folder — phishing 0.97 — quarantine — mail moved · LLM never woke', color: '#ff2a3c', confidence: 0.97 },
+  { name: 'YOUTUBE COMMENT', sub: 'Noul · worth_reply — yes 0.91 — draft reply — review folder',               color: '#9dff00', confidence: 0.91 },
+  { name: 'INBOUND LEAD',    sub: 'Score · lead_quality — high 0.89 — book_call — calendar link sent',          color: '#ffb400', confidence: 0.89 },
+  { name: 'BROWSER AGENT',   sub: 'Choice · action — type_destination 0.94 — code clicks — progress saved',     color: '#19d7ff', confidence: 0.94 },
+  { name: 'X FEED POST',     sub: 'Score · viral_fit — high 0.92 — draft_short — review folder · you hit Post', color: '#ff2e88', confidence: 0.92 },
+  { name: 'SUPPORT TICKET',  sub: 'Score · urgency — critical 0.71 — gate HOLD — human gate · ask',             color: '#8b5cff', confidence: 0.71 },
 ];
 
 export const THEMES: { id: string; label: string; color: string | null }[] = [
