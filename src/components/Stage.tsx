@@ -13,8 +13,8 @@ import { CASES, LABELS, RESULTS, LOG_LINES, sim, currentColor, istClock } from '
 interface Panel { x: number; y: number; col: number; row: number; li: number; accent: string }
 interface Ghost { x: number; y: number; w: string; a: number; ph: number }
 
-const COLS = 9;
-const ROWS = 9;
+const COLS = 7;
+const ROWS = 8;
 const ACCENTS = ['#ffd23e', '#25e6ff', '#ff5c8a', '#9dff00', '#e8f4ff'];
 const GHOST_WORDS = ['queue check', 'title len', 'api ping', 'log write', 'spam scan', 'hold gate', 'map read', 'token ok', 'cost chk', 'part no', 'link out', 'note save', 'time ist', 'dm state', 'post id'];
 
@@ -38,7 +38,7 @@ export default function Stage() {
     for (let c = 0; c < COLS; c++) {
       for (let r = 0; r < ROWS; r++) {
         panels.push({
-          x: 0.028 + c * 0.105, y: 0.04 + r * 0.104, col: c, row: r,
+          x: 0.02 + c * 0.1375, y: 0.025 + r * 0.1175, col: c, row: r,
           li: (c * ROWS + r * 7 + ((c * 3 + r) % 5)) % LABELS.length,
           accent: ACCENTS[(c * 2 + r * 3) % ACCENTS.length],
         });
@@ -47,7 +47,7 @@ export default function Stage() {
     const ghosts: Ghost[] = [];
     for (let i = 0; i < 130; i++) ghosts.push({ x: Math.random(), y: Math.random(), w: GHOST_WORDS[i % GHOST_WORDS.length], a: 0.10 + Math.random() * 0.22, ph: Math.random() * 6.28 });
     const rivers: number[] = [];
-    for (let i = 0; i < 8; i++) rivers.push(0.082 + i * 0.1055);
+    for (let i = 0; i < 6; i++) rivers.push(0.088 + i * 0.1375);
     const strandCols: [number, number, number][] = [[255, 255, 255], [160, 230, 255], [255, 170, 220], [255, 226, 150], [210, 240, 255]];
 
     let W = 0, H = 0, SW = 0, SH = 0;
@@ -62,12 +62,15 @@ export default function Stage() {
     fit();
     window.addEventListener('resize', fit);
 
-    const PW = () => W * 2.3;
-    const PH = () => H * 1.45;
-    const projX = (x: number, y: number) => (0.5 + (x - 0.5) * (0.90 + 0.10 * y)) * PW();
-    const projY = (y: number) => (0.03 + 0.97 * Math.pow(y, 1.05)) * PH();
-    const panW = () => PW() * 0.094;
-    const panH = () => PH() * 0.086;
+    /* FIXED layout (Vikram, 2026-11-05): no camera movement at all — the
+       whole plane fits the screen and stays in one place; only the light,
+       the path and the travelling command animate. */
+    const PW = () => W;
+    const PH = () => H;
+    const projX = (x: number, y: number) => (0.5 + (x - 0.5) * (0.96 + 0.04 * y)) * PW();
+    const projY = (y: number) => (0.02 + 0.98 * Math.pow(y, 1.03)) * PH();
+    const panW = () => PW() * 0.128;
+    const panH = () => PH() * 0.104;
 
     /* decision path state */
     let pathSet = new Set<number>();
@@ -157,10 +160,9 @@ export default function Stage() {
         if (Math.abs(nv) > 0.01 || target === 1) lit.set(i, nv);
       }
 
-      const cyc = (t * (active ? sim.speed : 0) + camPhase) % 56;
-      const tri = cyc < 28 ? cyc / 28 : 2 - cyc / 28;
-      const camX = tri * (PW() - W) * 0.94;
-      const camY = (PH() - H) * (0.34 + 0.16 * Math.sin(t * 0.1));
+      const camX = 0;
+      const camY = 0;
+      void camPhase;
 
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = '#010204';
@@ -169,7 +171,7 @@ export default function Stage() {
       ctx.translate(-camX, -camY);
 
       /* case wash */
-      const wash = ctx.createRadialGradient(PW() * (0.2 + tri * 0.6), PH() * 0.42, 60, PW() * (0.2 + tri * 0.6), PH() * 0.42, PW() * 0.55);
+      const wash = ctx.createRadialGradient(PW() * 0.5, PH() * 0.42, 60, PW() * 0.5, PH() * 0.42, PW() * 0.62);
       wash.addColorStop(0, rgba(colCur, 0.09)); wash.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = wash; ctx.fillRect(camX - 50, camY - 50, W + 100, H + 100);
 
