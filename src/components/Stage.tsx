@@ -105,6 +105,7 @@ export default function Stage() {
     const trail: { x: number; y: number }[] = [];
 
     let colCur = hexRgb(CASES[0].color);
+    let caseElapsed = 0;
     let logTimer = 0;
     let last = performance.now();
     let raf = 0;
@@ -118,10 +119,11 @@ export default function Stage() {
       const t = now * 0.001;
 
       if (active) {
-        if (sim.caseEndsAt === 0) sim.caseEndsAt = now + 7000;
-        if (now >= sim.caseEndsAt) {
+        if (sim.caseEndsAt === 0) { caseElapsed = 0; sim.caseEndsAt = 1; }
+        caseElapsed += dt;
+        if (caseElapsed >= 7000) {
           if (sim.theme === 'auto') sim.caseIdx = (sim.caseIdx + 1) % CASES.length;
-          sim.caseEndsAt = now + 7000;
+          caseElapsed = 0;
         }
         sim.decisions += (140 + Math.random() * 260) * (dt / 1000);
         sim.latency += (Math.random() - 0.5) * 1.6;
@@ -145,7 +147,8 @@ export default function Stage() {
         }
       }
       const colTgt = hexRgb(currentColor());
-      for (let i = 0; i < 3; i++) colCur[i] += (colTgt[i] - colCur[i]) * 0.04;
+      const lk = active ? Math.min(1, dt * 0.004) : 0.04;
+      for (let i = 0; i < 3; i++) colCur[i] += (colTgt[i] - colCur[i]) * lk;
       /* ease panel lights toward membership */
       for (let i = 0; i < panels.length; i++) {
         const target = pathSet.has(i) ? 1 : 0;
